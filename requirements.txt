@@ -1,9 +1,0 @@
-sphinx_rtd_theme
-boto3
-nilearn
-pandas
-torch
-torch_geometric
-networkx
-nibabel
-

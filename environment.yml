@@ -1,0 +1,20 @@
+name: neurograph
+channels:
+  - pytorch
+  - nvidia
+  - pyg
+dependencies:
+  - python=3.11
+  - pip
+  - sphinx_rtd_theme
+  - boto3
+  - numpy
+  - pandas
+  - matplotlib
+  - pytorch
+  - pyg
+  - networkx
+  - pip:
+    - nibabel
+    - nilearn
+

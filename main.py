@@ -32,7 +32,7 @@ parser.add_argument('--dropout', type=float, default=0.5)
 args = parser.parse_args()
 path = "base_params/"
 res_path = "results/"
-root = "data/"
+root = "/scratch/network/rb4785/data/"
 if not os.path.isdir(path):
     os.mkdir(path)
 if not os.path.isdir(res_path):
@@ -90,7 +90,8 @@ def test(loader):
     return correct / len(loader.dataset)  
 
 val_acc_history, test_acc_history, test_loss_history = [],[],[]
-seeds = [123,124]
+seeds = [i + 123 for i in range(args.runs)]
+# seeds = [123,124] # old
 for index in range(args.runs):
     start = time.time()
     fix_seed(seeds[index])
@@ -112,7 +113,7 @@ for index in range(args.runs):
         if val_acc > best_val_acc:
             best_val_acc = val_acc
             if epoch> int(args.epochs/2):## save the best model
-                torch.save(model.state_dict(), path + args.dataset+args.model+'task-checkpoint-best-acc.pkl')
+                torch.save(model.state_dict(), path + args.dataset+args.model+'task-checkpoint-best-acc.pkl'
        
 
     #test the model   
@@ -122,3 +123,4 @@ for index in range(args.runs):
     test_loss = train(test_loader).item()
     test_acc_history.append(test_acc)
     test_loss_history.append(test_loss)
+    # todo add metrics to logger()
