@@ -32,11 +32,14 @@ parser.add_argument('--dropout', type=float, default=0.5)
 args = parser.parse_args()
 path = "base_params/"
 res_path = "results/"
-root = "/scratch/network/rb4785/data/"
+# root = "/scratch/network/rb4785/NeuroGraph_data/"
+root = "/n/fs/scratch/rb4785/NeuroGraph_data/"
 if not os.path.isdir(path):
     os.mkdir(path)
 if not os.path.isdir(res_path):
     os.mkdir(res_path)
+def logfile_exists():
+    return os.path.isfile(os.path.join(res_path, 'results_new.csv'))
 def logger(info):
     f = open(os.path.join(res_path, 'results_new.csv'), 'a')
     print(info, file=f)
@@ -92,6 +95,8 @@ def test(loader):
 val_acc_history, test_acc_history, test_loss_history = [],[],[]
 seeds = [i + 123 for i in range(args.runs)]
 # seeds = [123,124] # old
+if not logfile_exists():
+    logger("dataset,model,best_val_acc,best_val_loss,test_acc,test_loss")
 for index in range(args.runs):
     start = time.time()
     fix_seed(seeds[index])
@@ -123,4 +128,7 @@ for index in range(args.runs):
     test_loss = train(test_loader).item()
     test_acc_history.append(test_acc)
     test_loss_history.append(test_loss)
-    # todo add metrics to logger()
+
+    # log to tensorboard??
+
+    logger(f"{args.dataset},{args.model},{best_val_acc},{best_val_loss},{test_acc},{test_loss}")
