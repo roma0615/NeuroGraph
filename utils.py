@@ -8,6 +8,10 @@ from torch_geometric.nn import APPNP, MLP, GCNConv, GINConv, SAGEConv, GraphConv
 from torch.nn import Conv1d, MaxPool1d, ModuleList
 import random
 import numpy as np
+
+# import DGM model
+from DGMlib.model_dDGM import DGM_Model
+
 softmax = torch.nn.LogSoftmax(dim=1)
 
 def fix_seed(seed):
