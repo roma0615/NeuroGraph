@@ -117,6 +117,8 @@ class NeuroGraphDataset(InMemoryDataset):
                 slices['edge_index'][i]:slices['edge_index'][i + 1],
             ]
             sample = Data(x=x, edge_index=edge_index, y=data.y[i])
+            sample.edge_attr = torch.zeros((edge_index.shape[-1],1), dtype=torch.float) # todo set these properly
+            sample.vectors = torch.zeros((3, edge_index.shape[-1]), dtype=torch.float)
 
             if self.pre_filter is not None and not self.pre_filter(sample):
                 continue

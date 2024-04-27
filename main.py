@@ -13,6 +13,8 @@ import sys
 import time
 from utils import *
 
+from mace.mace_gnn import MBPGNN
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', type=str, default='HCPGender')
 parser.add_argument('--runs', type=int, default=1)
@@ -71,7 +73,7 @@ criterion = torch.nn.CrossEntropyLoss()
 def train(train_loader):
     model.train()
     total_loss = 0
-    for data in train_loader:  
+    for data in train_loader:   # what is the type of data here?
         data = data.to(args.device)
         out = model(data)  
         loss = criterion(out, data.y) 
@@ -100,8 +102,14 @@ if not logfile_exists():
 for index in range(args.runs):
     start = time.time()
     fix_seed(seeds[index])
-    gnn = eval(args.model)
-    model = ResidualGNNs(args,train_dataset,args.hidden,args.hidden_mlp,args.num_layers,gnn).to(args.device) ## apply GNN*
+
+    # Build the model from args
+    if args.model == "MBPGNN":
+        print("Using MBPGNN instead of ResidualGNN!")
+        model = MBPGNN(train_dataset, args.hidden, args.hidden_mlp, args.num_layers).to(args.device)
+    else:
+        gnn = eval(args.model)
+        model = ResidualGNNs(args,train_dataset,args.hidden,args.hidden_mlp,args.num_layers,gnn).to(args.device) ## apply GNN*
     print(model)
     total_params = sum(p.numel() for p in model.parameters())
     print(f"Total number of parameters is: {total_params}")
@@ -118,7 +126,7 @@ for index in range(args.runs):
         if val_acc > best_val_acc:
             best_val_acc = val_acc
             if epoch> int(args.epochs/2):## save the best model
-                torch.save(model.state_dict(), path + args.dataset+args.model+'task-checkpoint-best-acc.pkl'
+                torch.save(model.state_dict(), path + args.dataset+args.model+'task-checkpoint-best-acc.pkl')
        
 
     #test the model   

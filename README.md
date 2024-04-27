@@ -1,3 +1,22 @@
+# Instructions
+
+If you do not have mamba, replace all instances of mamba with conda.
+```
+git clone --recurse-submodules https://github.com/roma0615/NeuroGraph
+
+# Install the environment
+cd NeuroGraph
+./install.sh
+
+# Install mace-layer
+mamba activate mace_ng
+cd mace/mace-layer
+pip install .
+```
+
+
+
+
 # NeuroGraph
 
 [Documentation](https://neurograph.readthedocs.io/en/latest/) | [Paper](https://arxiv.org/pdf/2306.06202.pdf) | [Website](https://anwar-said.github.io/anwarsaid/neurograph.html)
