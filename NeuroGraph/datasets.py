@@ -12,6 +12,13 @@ from torch_geometric.data import (
     extract_zip
 )
 
+class MaceData(Data):
+    def __cat_dim__(self, key, value, *args, **kwargs):
+        if 'index' in key or key == 'edge_vectors':
+            return 1
+        else:
+            return 0
+
 class NeuroGraphDataset(InMemoryDataset):
     r"""The NeuroGraph benchmark datasets from the
     `"NeuroGraph: Benchmarks for Graph Machine Learning in Brain Connectomics"
@@ -116,9 +123,9 @@ class NeuroGraphDataset(InMemoryDataset):
                 :,
                 slices['edge_index'][i]:slices['edge_index'][i + 1],
             ]
-            sample = Data(x=x, edge_index=edge_index, y=data.y[i])
-            sample.edge_attr = torch.zeros((edge_index.shape[-1],1), dtype=torch.float) # todo set these properly
-            sample.vectors = torch.zeros((3, edge_index.shape[-1]), dtype=torch.float)
+            sample = MaceData(x=x, edge_index=edge_index, y=data.y[i])
+            sample.edge_attr = torch.zeros((edge_index.shape[-1], 1), dtype=torch.float) # todo set these properly
+            sample.edge_vectors = torch.zeros((3, edge_index.shape[-1]), dtype=torch.float)
 
             if self.pre_filter is not None and not self.pre_filter(sample):
                 continue

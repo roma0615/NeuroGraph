@@ -1,4 +1,4 @@
-batch_size="16" # old: 16
+batch_size="4" # old: 16
 # model="GCNConv"
 hidden="64"
 main="main.py"

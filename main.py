@@ -64,9 +64,9 @@ train_dataset = tmp[train_indices]
 val_dataset = tmp[val_indices]
 test_dataset = dataset[test_indices]
 print("dataset {} loaded with train {} val {} test {} splits".format(args.dataset,len(train_dataset), len(val_dataset), len(test_dataset)))
-train_loader = DataLoader(train_dataset, args.batch_size, shuffle=False)
-val_loader = DataLoader(val_dataset, args.batch_size, shuffle=False)
-test_loader = DataLoader(test_dataset, args.batch_size, shuffle=False)
+train_loader = DataLoader(train_dataset, args.batch_size, shuffle=False, follow_batch=["edge_vectors"])
+val_loader = DataLoader(val_dataset, args.batch_size, shuffle=False, follow_batch=["edge_vectors"])
+test_loader = DataLoader(test_dataset, args.batch_size, shuffle=False, follow_batch=["edge_vectors"])
 args.num_features,args.num_classes = dataset.num_features,dataset.num_classes
 
 criterion = torch.nn.CrossEntropyLoss()

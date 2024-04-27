@@ -38,8 +38,8 @@ class MBPGNN(Module):
                 correlation=3,
                 n_dims_in=self.num_attributes,
                 hidden_irreps="256x0e + 256x1o", # recommended hidden model size (MACE repo)
-                node_feats_irreps=f"{self.num_attributes}x0e", # TODO insert the num w string template
-                edge_feats_irreps="1x0e",
+                node_feats_irreps=f"{self.num_attributes}x0e",
+                edge_feats_irreps="1x0e", # TODO what does this do?
                 avg_num_neighbors=10.0,
                 use_sc=True,
             ))
@@ -99,7 +99,7 @@ class MBPGNN(Module):
             )
             '''
             xs += [mace_layer(
-                data.vectors, # vectors (?)
+                data.edge_vectors.t(), # vectors (?)
                 xs[-1], # node feats
                 data.x, # node attributes
                 data.edge_attr, # edge attr/feats (?)
