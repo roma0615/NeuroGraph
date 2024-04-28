@@ -3,9 +3,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import Linear, ReLU, BatchNorm1d, Module, Sequential, ModuleList
 from torch_geometric.data import Data
+from torch_geometric.nn import aggr
+from e3nn import o3
 
 from mace_layer import MACE_layer
-
 
 # Multi-body potential (MBP) GNN layer
 class MBPGNN(Module):
@@ -13,6 +14,7 @@ class MBPGNN(Module):
     # def __init__(self, num_layers=4, emb_dim=64, in_dim=11, edge_dim=4, out_dim=1):
     # def __init__(self,args, train_dataset, hidden_channels,hidden, num_layers, GNN, k=0.6):
     # model = MBPGNN(train_dataset, args.hidden, args.num_layers)
+    # NOTE num_hidden isn't used
     def __init__(self, dataset, num_hidden, hidden_mlp, num_layers):
         """GNN that uses layer from MACE as message passing layer
 
@@ -22,32 +24,79 @@ class MBPGNN(Module):
         """
         super().__init__()
         self.convs = ModuleList()
+        self.aggr = aggr.MeanAggregation()
 
         self.num_attributes = dataset.num_features # "features" are actually attributes; true node features are learned and change over time
         self.hidden_channels = num_hidden
+        self.hidden_irreps = o3.Irreps("256x0e + 256x1o") # dim of this is 1024
+        self.hidden_irreps_out = self.hidden_irreps[0] # only scalars for last layer
         
         # Linear projection for initial node features
         # dim: d_n -> d
         # embedding dimension
-        self.attrib_to_features = Linear(self.num_attributes, self.num_attributes) # get node "features" from attributes, to then pass through the mace layer
+        # self.lin1 = Linear(self.num_attributes, self.hidden_irrep_dim) # get node "features" from attributes, to then pass through the mace layer
 
-        for i in range(0, num_layers):
-            # mace layer produces node features of same size, so we've already downscaled at this point
-            self.convs.append(MACE_layer(
-                max_ell=3,
-                correlation=3,
-                n_dims_in=self.num_attributes,
-                hidden_irreps="256x0e + 256x1o", # recommended hidden model size (MACE repo)
-                node_feats_irreps=f"{self.num_attributes}x0e",
-                edge_feats_irreps="1x0e", # TODO what does this do?
-                avg_num_neighbors=10.0,
-                use_sc=True,
-            ))
+        '''
+            inter = interaction_cls(
+                node_attrs_irreps=node_attr_irreps,
+                node_feats_irreps=hidden_irreps,
+                edge_attrs_irreps=sh_irreps,
+                edge_feats_irreps=edge_feats_irreps,
+                target_irreps=interaction_irreps,
+                hidden_irreps=hidden_irreps_out,
+                avg_num_neighbors=avg_num_neighbors,
+                radial_MLP=radial_MLP,
+            )
+        '''
+        node_attr_irreps = o3.Irreps([(self.num_attributes, (0, 1))])
+        node_feats_irreps = o3.Irreps([(self.hidden_irreps.count(o3.Irrep(0, 1)), (0, 1))])
+        self.node_embedding = o3.Linear(
+            irreps_in=node_attr_irreps, irreps_out=node_feats_irreps
+        )
 
-        input_dim1 = int(((self.num_attributes * self.num_attributes)/2)- (self.num_attributes/2)+(self.hidden_channels*num_layers))
+        self.convs.append(MACE_layer(
+            max_ell=3,
+            correlation=3,
+            n_dims_in=self.num_attributes, # NOTE 1000
+            node_feats_irreps=str(node_feats_irreps), # NOTE 256
+            hidden_irreps=str(self.hidden_irreps), # recommended hidden model size (MACE repo) # NOTE 1024
+            edge_feats_irreps="1x0e", # TODO what does this do?
+            avg_num_neighbors=10.0,
+            use_sc=True,
+        ))
+        for i in range(num_layers-1):
+            if i < num_layers - 2: 
+                self.convs.append(MACE_layer(
+                    max_ell=3,
+                    correlation=3,
+                    n_dims_in=self.num_attributes,
+                    node_feats_irreps=str(self.hidden_irreps), # NOTE 1024
+                    hidden_irreps=str(self.hidden_irreps), # NOTE 1024
+                    edge_feats_irreps="1x0e", # TODO what does this do?
+                    avg_num_neighbors=10.0,
+                    use_sc=True,
+                ))
+            else: # last layer
+                self.convs.append(MACE_layer(
+                    max_ell=3,
+                    correlation=3,
+                    n_dims_in=self.num_attributes,
+                    node_feats_irreps=str(self.hidden_irreps), # NOTE 1024
+                    hidden_irreps=str(self.hidden_irreps_out), # NOTE 256
+                    edge_feats_irreps="1x0e", # TODO what does this do?
+                    avg_num_neighbors=10.0,
+                    use_sc=True,
+                ))
+
+
         input_dim = int(((self.num_attributes * self.num_attributes)/2)- (self.num_attributes/2))
         self.bn = nn.BatchNorm1d(input_dim)
-        self.bnh = nn.BatchNorm1d(self.hidden_channels*num_layers)
+        # node_feats_irreps.dim + self.hidden_irreps.dim * (num_layers-1) + self.hidden_irreps_out.dim
+        # self.bnh = nn.BatchNorm1d(hidden_channels*num_layers)
+        bnh_input_dim = node_feats_irreps.dim + self.hidden_irreps.dim * (num_layers-1) + self.hidden_irreps_out.dim
+        self.bnh = nn.BatchNorm1d(bnh_input_dim)
+
+        input_dim1 = int(bnh_input_dim + (self.num_attributes**2 - self.num_attributes)//2)
         self.mlp = nn.Sequential(
             nn.Linear(input_dim1, hidden_mlp),
             nn.BatchNorm1d(hidden_mlp),
@@ -84,10 +133,11 @@ class MBPGNN(Module):
 
         # from ResidualGNNs
         x = data.x
-        xs = [x] # keep a running list of node features
+        # breakpoint()
+        xs = [x]
         # right now, x is attribute
-        xs += [self.attrib_to_features(xs[-1]).relu()]
-        # now its a feature
+        xs += [self.node_embedding(xs[-1]).tanh()]
+        # now its a feature of dimension hidden_irrep
         for mace_layer in self.convs:
             '''
             node_feats = self.mace_layer1(
@@ -107,17 +157,20 @@ class MBPGNN(Module):
             ).tanh()] 
 
         # what is this part. ig don't have to understand it
+        # i think this is residual connections
+        # 1000, 1024, 256, 256
         h = []
         for i, xx in enumerate(xs): # for all values that node feats was
             if i == 0:
-                xx = xx.reshape(data.num_graphs, x.shape[1], -1)
-                x = torch.stack([t.triu().flatten()[t.triu().flatten().nonzero(as_tuple=True)] for t in xx])
+                xx = xx.reshape(data.num_graphs, x.shape[1], -1) # unbatch
+                x = torch.stack([t.triu().flatten()[t.triu().flatten().nonzero(as_tuple=True)] for t in xx]) # get values just in top triangle (since its symmetric). this is n^2 - n values
                 x = self.bn(x)
+                # we don't pass to h?
             else:
                 xx = self.aggr(xx, data.batch)
                 h.append(xx)
         
-        h = torch.cat(h,dim=1)
+        h = torch.cat(h,dim=1) # combine them along dim 1; [data.batch x 1024 + 256 + 256]
         h = self.bnh(h)
         x = torch.cat((x,h),dim=1)
         x = self.mlp(x)

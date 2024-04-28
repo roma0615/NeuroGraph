@@ -1,5 +1,6 @@
 from NeuroGraph.datasets import NeuroGraphDataset
 import argparse
+import gc
 import torch
 import torch.nn.functional as F
 from torch.optim import Adam
@@ -69,18 +70,40 @@ val_loader = DataLoader(val_dataset, args.batch_size, shuffle=False, follow_batc
 test_loader = DataLoader(test_dataset, args.batch_size, shuffle=False, follow_batch=["edge_vectors"])
 args.num_features,args.num_classes = dataset.num_features,dataset.num_classes
 
+def check_memory():
+    tot_mb = 0
+    for obj in gc.get_objects():
+        try:
+            if hasattr(obj, 'data') and torch.is_tensor(obj.data):
+                obj = obj.data
+            if torch.is_tensor(obj):
+                mem_mb = (obj.nelement() * obj.element_size()) / 1e6
+                tot_mb += mem_mb # in megabytes
+                print(f"{mem_mb:.0f} MB |", type(obj), obj.size())
+        except:
+            pass
+    
+    tot_gb = tot_mb / 1e3
+    print(f"Tot GB: {tot_gb:.0f}")
+
 criterion = torch.nn.CrossEntropyLoss()
 def train(train_loader):
     model.train()
     total_loss = 0
     for data in train_loader:   # what is the type of data here?
+        print("Next data")
+        breakpoint()
         data = data.to(args.device)
         out = model(data)  
         loss = criterion(out, data.y) 
-        total_loss +=loss
+        total_loss += loss.item()
+
+        check_memory()
+
         loss.backward()
         optimizer.step() 
         optimizer.zero_grad()
+
     return total_loss/len(train_loader.dataset)
 
 @torch.no_grad()
