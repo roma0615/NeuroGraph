@@ -122,7 +122,7 @@ val_acc_history, test_acc_history, test_loss_history = [],[],[]
 seeds = [i + 123 for i in range(args.runs)]
 # seeds = [123,124] # old
 if not logfile_exists():
-    logger("dataset,model,best_val_acc,best_val_loss,test_acc,test_loss")
+    logger("dataset,model,epochs,best_val_acc,best_val_loss,test_acc,test_loss")
 for index in range(args.runs):
     start = time.time()
     fix_seed(seeds[index])
@@ -163,4 +163,4 @@ for index in range(args.runs):
 
     # log to tensorboard??
 
-    logger(f"{args.dataset},{args.model},{best_val_acc},{best_val_loss},{test_acc},{test_loss}")
+    logger(f"{args.dataset},{args.model},{args.epochs},{best_val_acc},{best_val_loss},{test_acc},{test_loss}")
