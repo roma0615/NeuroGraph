@@ -13,6 +13,7 @@ import os.path as osp
 import sys
 import time
 from utils import *
+from tqdm import tqdm
 
 from mace.mace_gnn import MBPGNN
 
@@ -65,9 +66,9 @@ train_dataset = tmp[train_indices]
 val_dataset = tmp[val_indices]
 test_dataset = dataset[test_indices]
 print("dataset {} loaded with train {} val {} test {} splits".format(args.dataset,len(train_dataset), len(val_dataset), len(test_dataset)))
-train_loader = DataLoader(train_dataset, args.batch_size, shuffle=False, follow_batch=["edge_vectors"])
-val_loader = DataLoader(val_dataset, args.batch_size, shuffle=False, follow_batch=["edge_vectors"])
-test_loader = DataLoader(test_dataset, args.batch_size, shuffle=False, follow_batch=["edge_vectors"])
+train_loader = DataLoader(train_dataset, args.batch_size, shuffle=False, follow_batch=["edge_vectors"], drop_last=True)
+val_loader = DataLoader(val_dataset, args.batch_size, shuffle=False, follow_batch=["edge_vectors"], drop_last=True)
+test_loader = DataLoader(test_dataset, args.batch_size, shuffle=False, follow_batch=["edge_vectors"], drop_last=True)
 args.num_features,args.num_classes = dataset.num_features,dataset.num_classes
 
 def check_memory():
@@ -90,15 +91,15 @@ criterion = torch.nn.CrossEntropyLoss()
 def train(train_loader):
     model.train()
     total_loss = 0
-    for data in train_loader:   # what is the type of data here?
-        print("Next data")
-        breakpoint()
+    for data in tqdm(train_loader, desc="Train Dataloader"):
+        # print("Next data")
+        # breakpoint()
         data = data.to(args.device)
         out = model(data)  
         loss = criterion(out, data.y) 
         total_loss += loss.item()
 
-        check_memory()
+        # check_memory()
 
         loss.backward()
         optimizer.step() 
@@ -110,7 +111,7 @@ def train(train_loader):
 def test(loader):
     model.eval()
     correct = 0
-    for data in loader:  
+    for data in tqdm(loader, desc="Test Dataloader"):  
         data = data.to(args.device)
         out = model(data)  
         pred = out.argmax(dim=1)  
@@ -144,7 +145,7 @@ for index in range(args.runs):
         val_acc = test(val_loader)
         test_acc = test(test_loader)
         # if epoch%10==0:
-        print("epoch: {}, loss: {}, val_acc:{}, test_acc:{}".format(epoch, np.round(loss.item(),6), np.round(val_acc,2),np.round(test_acc,2)))
+        print("epoch: {}, loss: {}, val_acc:{}, test_acc:{}".format(epoch, np.round(loss, 6), np.round(val_acc,2),np.round(test_acc,2)))
         val_acc_history.append(val_acc)
         if val_acc > best_val_acc:
             best_val_acc = val_acc
@@ -156,7 +157,7 @@ for index in range(args.runs):
     model.load_state_dict(torch.load(path + args.dataset+args.model+'task-checkpoint-best-acc.pkl'))
     model.eval()
     test_acc = test(test_loader)
-    test_loss = train(test_loader).item()
+    test_loss = train(test_loader)
     test_acc_history.append(test_acc)
     test_loss_history.append(test_loss)
 

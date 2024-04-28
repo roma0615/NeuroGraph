@@ -28,7 +28,7 @@ class MBPGNN(Module):
 
         self.num_attributes = dataset.num_features # "features" are actually attributes; true node features are learned and change over time
         self.hidden_channels = num_hidden
-        self.hidden_irreps = o3.Irreps("256x0e + 256x1o") # dim of this is 1024
+        self.hidden_irreps = o3.Irreps("64x0e + 64x1o") # dim of this is 1024 jk now its 256
         self.hidden_irreps_out = self.hidden_irreps[0] # only scalars for last layer
         
         # Linear projection for initial node features
