@@ -18,6 +18,7 @@ from tqdm import tqdm
 from mace.mace_gnn import MBPGNN
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--label', type=str, default=f"run{random.randint(0, 1000)}")
 parser.add_argument('--dataset', type=str, default='HCPGender')
 parser.add_argument('--runs', type=int, default=1)
 parser.add_argument('--device', type=str, default='cuda')
@@ -42,10 +43,10 @@ if not os.path.isdir(path):
     os.mkdir(path)
 if not os.path.isdir(res_path):
     os.mkdir(res_path)
-def logfile_exists():
-    return os.path.isfile(os.path.join(res_path, 'results_new.csv'))
-def logger(info):
-    f = open(os.path.join(res_path, 'results_new.csv'), 'a')
+def logfile_exists(filename):
+    return os.path.isfile(os.path.join(res_path, filename))
+def logger(info, filename='results_new.csv'):
+    f = open(os.path.join(res_path, filename), 'a')
     print(info, file=f)
 
 fix_seed(args.seed)
@@ -121,8 +122,12 @@ def test(loader):
 val_acc_history, test_acc_history, test_loss_history = [],[],[]
 seeds = [i + 123 for i in range(args.runs)]
 # seeds = [123,124] # old
-if not logfile_exists():
-    logger("dataset,model,epochs,best_val_acc,best_val_loss,test_acc,test_loss")
+
+if not logfile_exists('results_new.csv'):
+    logger("label,dataset,model,epochs,best_val_acc,best_val_loss,test_acc,test_loss")
+if not logfile_exists('history.csv'):
+    logger("label,dataset,model,epoch,loss,val_acc,test_acc", filename='history.csv') # no test loss
+
 for index in range(args.runs):
     start = time.time()
     fix_seed(seeds[index])
@@ -146,11 +151,12 @@ for index in range(args.runs):
         test_acc = test(test_loader)
         # if epoch%10==0:
         print("epoch: {}, loss: {}, val_acc:{}, test_acc:{}".format(epoch, np.round(loss, 6), np.round(val_acc,2),np.round(test_acc,2)))
+        # logger("label,dataset,model,epoch,loss,val_acc,test_acc")
+        logger(f"{args.label},{args.dataset},{args.model},{epoch},{loss},{val_acc},{test_acc}", filename='history.csv')
         val_acc_history.append(val_acc)
         if val_acc > best_val_acc:
             best_val_acc = val_acc
-            if epoch> int(args.epochs/2):## save the best model
-                torch.save(model.state_dict(), path + args.dataset+args.model+'task-checkpoint-best-acc.pkl')
+            torch.save(model.state_dict(), path + args.dataset+args.model+'task-checkpoint-best-acc.pkl')
        
 
     #test the model   
@@ -163,4 +169,4 @@ for index in range(args.runs):
 
     # log to tensorboard??
 
-    logger(f"{args.dataset},{args.model},{args.epochs},{best_val_acc},{best_val_loss},{test_acc},{test_loss}")
+    logger(f"{args.label},{args.dataset},{args.model},{args.epochs},{best_val_acc},{best_val_loss},{test_acc},{test_loss}")

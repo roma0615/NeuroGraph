@@ -28,11 +28,17 @@ class ResidualGNNs(torch.nn.Module):
         self.aggr = aggr.MeanAggregation()
         self.hidden_channels = hidden_channels
         num_features = train_dataset.num_features
+        # TODO remove magic number for in_edge_channels
         if args.model=="ChebConv":
             if num_layers>0:
                 self.convs.append(GNN(num_features, hidden_channels,K=5))
                 for i in range(0, num_layers - 1):
                     self.convs.append(GNN(hidden_channels, hidden_channels,K=5))
+        elif args.model=="GeneralConv":
+            if num_layers>0:
+                self.convs.append(GNN(num_features, hidden_channels, in_edge_channels=1))
+                for i in range(0, num_layers - 1):
+                    self.convs.append(GNN(hidden_channels, hidden_channels, in_edge_channels=1))
         else:
             if num_layers>0:
                 self.convs.append(GNN(num_features, hidden_channels))
@@ -60,10 +66,10 @@ class ResidualGNNs(torch.nn.Module):
         )
 
     def forward(self, data):
-        x, edge_index, batch = data.x, data.edge_index, data.batch
+        x, edge_index, edge_attr, batch = data.x, data.edge_index, data.edge_attr, data.batch
         xs = [x]        
         for conv in self.convs:
-            xs += [conv(xs[-1], edge_index).tanh()]
+            xs += [conv(xs[-1], edge_index, edge_attr).tanh()]
         h = []
         for i, xx in enumerate(xs):
             if i== 0:

@@ -36,18 +36,6 @@ class MBPGNN(Module):
         # embedding dimension
         # self.lin1 = Linear(self.num_attributes, self.hidden_irrep_dim) # get node "features" from attributes, to then pass through the mace layer
 
-        '''
-            inter = interaction_cls(
-                node_attrs_irreps=node_attr_irreps,
-                node_feats_irreps=hidden_irreps,
-                edge_attrs_irreps=sh_irreps,
-                edge_feats_irreps=edge_feats_irreps,
-                target_irreps=interaction_irreps,
-                hidden_irreps=hidden_irreps_out,
-                avg_num_neighbors=avg_num_neighbors,
-                radial_MLP=radial_MLP,
-            )
-        '''
         node_attr_irreps = o3.Irreps([(self.num_attributes, (0, 1))])
         node_feats_irreps = o3.Irreps([(self.hidden_irreps.count(o3.Irrep(0, 1)), (0, 1))])
         self.node_embedding = o3.Linear(
@@ -57,9 +45,9 @@ class MBPGNN(Module):
         self.convs.append(MACE_layer(
             max_ell=3,
             correlation=3,
-            n_dims_in=self.num_attributes, # NOTE 1000
-            node_feats_irreps=str(node_feats_irreps), # NOTE 256
-            hidden_irreps=str(self.hidden_irreps), # recommended hidden model size (MACE repo) # NOTE 1024
+            n_dims_in=self.num_attributes,
+            node_feats_irreps=str(node_feats_irreps), 
+            hidden_irreps=str(self.hidden_irreps), # recommended hidden model size (MACE repo)
             edge_feats_irreps="1x0e", # TODO what does this do?
             avg_num_neighbors=10.0,
             use_sc=True,
@@ -70,8 +58,8 @@ class MBPGNN(Module):
                     max_ell=3,
                     correlation=3,
                     n_dims_in=self.num_attributes,
-                    node_feats_irreps=str(self.hidden_irreps), # NOTE 1024
-                    hidden_irreps=str(self.hidden_irreps), # NOTE 1024
+                    node_feats_irreps=str(self.hidden_irreps),
+                    hidden_irreps=str(self.hidden_irreps),
                     edge_feats_irreps="1x0e", # TODO what does this do?
                     avg_num_neighbors=10.0,
                     use_sc=True,
@@ -129,7 +117,8 @@ class MBPGNN(Module):
         #   - vectors = positions[receiver] - positions[sender] + shifts  # [n_edges, 3] -- from mace/modules/utils get_edge_vectors_and_lengths()
         # [X] figure out why edge_attr is wrong OHHH ITS A BATCH. but still why it expecting 64 :( oh thats a layer. oh im passing wrong shape of these things.
         #   - ok fixed the shape of stuff
-        # [ ] can't concatenate tensors of diff lengths - diff elemenets in batch have diff # edges :(
+        # [X] can't concatenate tensors of diff lengths - diff elemenets in batch have diff # edges :(
+        #   - fixed
 
         # from ResidualGNNs
         x = data.x
@@ -139,15 +128,6 @@ class MBPGNN(Module):
         xs += [self.node_embedding(xs[-1]).tanh()]
         # now its a feature of dimension hidden_irrep
         for mace_layer in self.convs:
-            '''
-            node_feats = self.mace_layer1(
-                data.vectors, # vectors ??? what are these
-                node_feats, # node_feats,
-                data.x, # node_attrs,
-                data.edge_attr, # edge_feats, THIS IS NONE what do we dooooo
-                data.edge_index, # edge_index
-            )
-            '''
             xs += [mace_layer(
                 data.edge_vectors.t(), # vectors (?)
                 xs[-1], # node feats
