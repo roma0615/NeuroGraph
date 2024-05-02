@@ -112,6 +112,7 @@ class MBPGNN(Module):
             out: (batch_size, out_dim) - prediction for each graph
         """
 
+
         # TODO:
         # [ ] figure out what to pass in as vectors. its used to make spherical harmonics so it def matters.
         #   - vectors = positions[receiver] - positions[sender] + shifts  # [n_edges, 3] -- from mace/modules/utils get_edge_vectors_and_lengths()
@@ -122,14 +123,16 @@ class MBPGNN(Module):
 
         # from ResidualGNNs
         x = data.x
-        # breakpoint()
+        # from random
+        edge_vectors = data.edge_vectors.t()
+        # breakpoint(HC
         xs = [x]
         # right now, x is attribute
         xs += [self.node_embedding(xs[-1]).tanh()]
         # now its a feature of dimension hidden_irrep
         for mace_layer in self.convs:
             xs += [mace_layer(
-                data.edge_vectors.t(), # vectors (?)
+                edge_vectors, # vectors (?)
                 xs[-1], # node feats
                 data.x, # node attributes
                 data.edge_attr, # edge attr/feats (?)

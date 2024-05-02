@@ -128,11 +128,10 @@ class NeuroGraphDataset(InMemoryDataset):
             # set edge_attr equal to the correlation amt from x?
             # sample.edge_attr;
 
-            # what if we just randomly assign
+            # all zeros
             # sample.edge_vectors = torch.zeros((3, edge_index.shape[-1]), dtype=torch.float)
             # sample from normal distribution, then noramlize along dim=0 (to normalize each vector)
             sample.edge_vectors = torch.nn.functional.normalize(torch.randn((3, edge_index.shape[-1]), dtype=torch.float), dim=0)
-            # should these edge vectors have some more information in them tho...
 
             if self.pre_filter is not None and not self.pre_filter(sample):
                 continue
