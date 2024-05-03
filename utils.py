@@ -28,7 +28,6 @@ class ResidualGNNs(torch.nn.Module):
         self.aggr = aggr.MeanAggregation()
         self.hidden_channels = hidden_channels
         num_features = train_dataset.num_features
-        # TODO remove magic number for in_edge_channels
         if args.model=="ChebConv":
             if num_layers>0:
                 self.convs.append(GNN(num_features, hidden_channels,K=5))

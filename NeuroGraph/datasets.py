@@ -124,12 +124,7 @@ class NeuroGraphDataset(InMemoryDataset):
                 slices['edge_index'][i]:slices['edge_index'][i + 1],
             ]
             sample = MaceData(x=x, edge_index=edge_index, y=data.y[i])
-            sample.edge_attr = torch.zeros((edge_index.shape[-1], 1), dtype=torch.float) # TODO set these properly
-            # set edge_attr equal to the correlation amt from x?
-            # sample.edge_attr;
-
-            # all zeros
-            # sample.edge_vectors = torch.zeros((3, edge_index.shape[-1]), dtype=torch.float)
+            sample.edge_attr = torch.zeros((edge_index.shape[-1], 1), dtype=torch.float)
             # sample from normal distribution, then noramlize along dim=0 (to normalize each vector)
             sample.edge_vectors = torch.nn.functional.normalize(torch.randn((3, edge_index.shape[-1]), dtype=torch.float), dim=0)
 

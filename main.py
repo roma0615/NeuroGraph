@@ -15,7 +15,7 @@ import time
 from utils import *
 from tqdm import tqdm
 
-from mace.mace_gnn import MBPGNN
+from mace.mace_gnn import MaceGNN
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--label', type=str, default=f"run{random.randint(0, 1000)}")
@@ -133,9 +133,9 @@ for index in range(args.runs):
     fix_seed(seeds[index])
 
     # Build the model from args
-    if args.model == "MBPGNN":
-        print("Using MBPGNN instead of ResidualGNN!")
-        model = MBPGNN(train_dataset, args.hidden, args.hidden_mlp, args.num_layers).to(args.device)
+    if args.model == "MaceGNN":
+        print("Using MaceGNN instead of ResidualGNN!")
+        model = MaceGNN(train_dataset, args.hidden, args.hidden_mlp, args.num_layers).to(args.device)
     else:
         gnn = eval(args.model)
         model = ResidualGNNs(args,train_dataset,args.hidden,args.hidden_mlp,args.num_layers,gnn).to(args.device) ## apply GNN*
